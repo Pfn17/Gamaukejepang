@@ -37,6 +37,11 @@ def index():
     return render_template("dashboard.html", refresh_seconds=5)
 
 
+@app.route("/mini")
+def mini_app():
+    return render_template("telegram_miniapp.html")
+
+
 @app.route("/api/status")
 def api_status():
     status = read_status()

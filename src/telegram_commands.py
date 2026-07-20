@@ -4,6 +4,16 @@ from src import journal
 from config import cfg
 
 
+def _dashboard_url() -> str:
+    base = os.getenv("DASHBOARD_URL", "http://localhost:5000")
+    return base.rstrip("/")
+
+
+def _mini_app_url() -> str:
+    base = _dashboard_url()
+    return f"{base}/mini"
+
+
 STATUS_PATH = os.path.join(os.path.dirname(__file__), "..", "journal", "status.json")
 
 
@@ -33,13 +43,16 @@ def build_status_message() -> str:
     stats = journal.summary_stats()
     open_positions = status.get("open_positions", [])
     lines = [
-        "📊 Bot Status",
+        "📊 Bot Monitor",
         f"State: {status.get('state', 'unknown')}",
         f"Last scan: {status.get('last_scan', 'n/a')}",
         f"Open positions: {len(open_positions)}",
-        f"Total trades: {stats['total_trades']}",
+        f"Trades: {stats['total_trades']}",
         f"Winrate: {stats['winrate_pct']}%",
         f"PnL: {stats['total_pnl']} USDT",
+        "",
+        f"Dashboard: {_dashboard_url()}",
+        f"Mini App: {_mini_app_url()}",
     ]
     if open_positions:
         lines.append("\nOpen positions:")
@@ -60,7 +73,9 @@ def build_stats_message() -> str:
         f"Wins: {stats['wins']}\n"
         f"Losses: {stats['losses']}\n"
         f"Winrate: {stats['winrate_pct']}%\n"
-        f"Total PnL: {stats['total_pnl']} USDT"
+        f"Total PnL: {stats['total_pnl']} USDT\n\n"
+        f"Dashboard: {_dashboard_url()}\n"
+        f"Mini App: {_mini_app_url()}"
     )
 
 
@@ -88,7 +103,7 @@ def handle_command(command: str) -> str:
         lines = ["📍 Open positions:"]
         for pos in positions:
             lines.append(f"- {pos['symbol']} | {pos['market']} | entry {pos['entry']:.4f} | SL {pos['stop_loss']:.4f} | TP {pos['take_profit']:.4f}")
-        return "\n".join(lines)
+        return "\n".join(lines + ["", f"Dashboard: {_dashboard_url()}", f"Mini App: {_mini_app_url()}"])
     if cmd in {"/stats", "stats"}:
         return build_stats_message()
     if cmd in {"/logs", "logs"}:

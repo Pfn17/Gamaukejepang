@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scalper Monitor</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; padding: 16px; }
+    .card { background: #111827; border: 1px solid #334155; border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+    .title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .muted { color: #94a3b8; font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .metric { background: #1f2937; border-radius: 10px; padding: 10px; }
+    .metric .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+    .metric .value { font-size: 18px; font-weight: 700; margin-top: 5px; }
+    .good { color: #34d399; } .bad { color: #f87171; } .warn { color: #fbbf24; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 6px 0; border-bottom: 1px solid #334155; }
+    .pill { display:inline-block; padding: 4px 8px; border-radius:999px; background:#1d4ed8; color:white; font-size:11px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="title">📊 Crypto Scalper Monitor</div>
+    <div class="muted" id="statusLine">Loading...</div>
+  </div>
+
+  <div class="grid">
+    <div class="metric"><div class="label">State</div><div class="value" id="stateValue">-</div></div>
+    <div class="metric"><div class="label">Open Positions</div><div class="value" id="posValue">0</div></div>
+    <div class="metric"><div class="label">Winrate</div><div class="value" id="winrateValue">0%</div></div>
+    <div class="metric"><div class="label">PnL</div><div class="value" id="pnlValue">0</div></div>
+  </div>
+
+  <div class="card">
+    <div class="title">Positions</div>
+    <table>
+      <thead><tr><th>Symbol</th><th>SL</th><th>TP</th></tr></thead>
+      <tbody id="positionsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="title">Recent Events</div>
+    <div id="eventsBody"></div>
+  </div>
+
+  <script>
+    async function refresh() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        const status = data.status || {};
+        const stats = data.stats || {};
+        const openPositions = status.open_positions || [];
+        document.getElementById('statusLine').textContent = 'Last scan: ' + (status.last_scan || 'n/a');
+        document.getElementById('stateValue').textContent = status.state || 'unknown';
+        document.getElementById('posValue').textContent = openPositions.length;
+        document.getElementById('winrateValue').textContent = (stats.winrate_pct || 0) + '%';
+        document.getElementById('pnlValue').textContent = (stats.total_pnl || 0) + ' USDT';
+        document.getElementById('positionsBody').innerHTML = openPositions.length ? openPositions.map(p => `<tr><td>${p.symbol}</td><td>${p.stop_loss}</td><td>${p.take_profit}</td></tr>`).join('') : '<tr><td colspan="3">No open positions</td></tr>';
+        const events = (data.recent_events || []).slice(0, 6);
+        document.getElementById('eventsBody').innerHTML = events.length ? events.map(e => `<div class="pill">${e.type}</div> ${e.symbol || ''} ${e.reason || ''}<br/>`).join('') : 'No events yet';
+      } catch (err) {
+        document.getElementById('statusLine').textContent = 'Error: ' + err;
+      }
+    }
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>

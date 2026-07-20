@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Scalper Dashboard</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
+  h1 { font-size:20px; margin-bottom:4px; }
+  .sub { color:#8a8f98; font-size:13px; margin-bottom:20px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:24px; }
+  .card { background:#1a1d24; border-radius:10px; padding:14px; }
+  .card .label { color:#8a8f98; font-size:12px; text-transform:uppercase; }
+  .card .value { font-size:22px; font-weight:600; margin-top:4px; }
+  .green { color:#4ade80; } .red { color:#f87171; } .yellow { color:#facc15; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #24272f; }
+  th { color:#8a8f98; font-weight:500; }
+  .badge { padding:2px 8px; border-radius:6px; font-size:11px; }
+  .b-signal { background:#1e3a8a33; color:#93c5fd; }
+  .b-open { background:#78350f33; color:#fcd34d; }
+  .b-closed-win { background:#14532d33; color:#4ade80; }
+  .b-closed-loss { background:#7f1d1d33; color:#f87171; }
+  .section-title { margin:24px 0 8px; font-size:15px; color:#c8ccd4; }
+</style>
+</head>
+<body>
+  <h1>🩳 Crypto Scalper — Live Monitor (TESTNET)</h1>
+  <div class="sub" id="lastUpdate">loading...</div>
+
+  <div class="grid" id="statsGrid"></div>
+
+  <div class="section-title">Quantitative & Market Context</div>
+  <table id="marketTable"><thead><tr><th>Symbol</th><th>Market</th><th>Quant</th><th>Score</th><th>Sentiment</th><th>Fundamental</th><th>Context</th></tr></thead><tbody></tbody></table>
+
+  <div class="section-title">Open Positions</div>
+  <table id="openTable"><thead><tr><th>Symbol</th><th>Entry</th><th>SL</th><th>TP</th><th>Qty</th><th>Market</th></tr></thead><tbody></tbody></table>
+
+  <div class="section-title">Recent Events</div>
+  <table id="eventsTable"><thead><tr><th>Time (UTC)</th><th>Type</th><th>Detail</th></tr></thead><tbody></tbody></table>
+
+<script>
+async function refresh() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    document.getElementById('lastUpdate').textContent =
+      'Bot state: ' + (data.status.state || 'unknown') + ' | last scan: ' + (data.status.last_scan || '-');
+
+    const stats = data.stats;
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="card"><div class="label">Total Trades</div><div class="value">${stats.total_trades}</div></div>
+      <div class="card"><div class="label">Winrate</div><div class="value ${stats.winrate_pct>=50?'green':'red'}">${stats.winrate_pct}%</div></div>
+      <div class="card"><div class="label">Wins / Losses</div><div class="value">${stats.wins} / ${stats.losses}</div></div>
+      <div class="card"><div class="label">Total PnL (USDT)</div><div class="value ${stats.total_pnl>=0?'green':'red'}">${stats.total_pnl}</div></div>
+    `;
+
+    const marketData = await fetch('/api/market').then(r => r.json());
+    const quantRows = (marketData.quant || []).slice(0, 10).map(item => `
+      <tr><td>${item.symbol}</td><td>${item.market}</td><td><span class="badge ${item.quant.label === 'bullish' ? 'b-closed-win' : item.quant.label === 'bearish' ? 'b-closed-loss' : 'b-signal'}">${item.quant.label}</span></td><td>${item.quant.score}</td><td>${item.quant.sentiment}</td><td>${item.quant.fundamental}</td><td>${(item.quant.reasons || []).slice(0, 2).join(', ')}</td></tr>
+    `).join('');
+    document.querySelector('#marketTable tbody').innerHTML = quantRows || '<tr><td colspan="6" style="color:#666">No market context available</td></tr>';
+
+    const openPos = data.status.open_positions || [];
+    document.querySelector('#openTable tbody').innerHTML = openPos.map(p => `
+      <tr><td>${p.symbol}</td><td>${p.entry}</td><td>${p.stop_loss}</td><td>${p.take_profit}</td><td>${p.qty}</td><td>${p.market}</td></tr>
+    `).join('') || '<tr><td colspan="6" style="color:#666">No open positions</td></tr>';
+
+    document.querySelector('#eventsTable tbody').innerHTML = data.recent_events.map(e => `
+      <tr><td>${e.ts}</td><td><span class="badge b-${e.type.includes('closed') ? (e.pnl>0?'closed-win':'closed-loss') : (e.type.includes('open')?'open':'signal')}">${e.type}</span></td><td>${e.symbol || ''} ${e.reason || ''} ${e.pnl!==undefined ? 'PnL: '+e.pnl : ''}</td></tr>
+    `).join('') || '<tr><td colspan="3" style="color:#666">No events yet</td></tr>';
+  } catch (err) {
+    document.getElementById('lastUpdate').textContent = 'dashboard error: ' + err;
+  }
+}
+refresh();
+setInterval(refresh, {{ refresh_seconds * 1000 }});
+</script>
+</body>
+</html>

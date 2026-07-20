@@ -1,0 +1,18 @@
+version: '3.9'
+services:
+  bot:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+    command: python -m src.main
+  dashboard:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+    ports:
+      - "5000:5000"
+    command: python -m src.dashboard

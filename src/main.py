@@ -127,6 +127,7 @@ def try_execute_signal(client, market_type, signal):
     except (BinanceAPIError, executor.ExecutionError) as e:
         print(f"[exec] FAILED {signal.symbol}: {e}")
         journal.log_event("execution_failed", {"symbol": signal.symbol, "error": str(e)})
+        telegram_bot.send_message(f"⚠️ EXECUTION FAILED {signal.symbol}: {e}")
         return
 
     trade_record = {

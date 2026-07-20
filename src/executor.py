@@ -20,6 +20,8 @@ def execute_futures_long(client, symbol, qty, entry_signal, leverage=3):
     """
     filters = client.get_symbol_filters(symbol)
     qty = client.round_qty(symbol, qty)
+    if qty <= 0:
+        raise ExecutionError(f"{symbol}: rounded qty is zero")
     if qty < float(filters["min_qty"]):
         raise ExecutionError(f"{symbol}: sized qty {qty} below exchange min_qty {filters['min_qty']}")
 
@@ -60,6 +62,8 @@ def execute_spot_long(client, symbol, qty, entry_signal):
     """
     filters = client.get_symbol_filters(symbol)
     qty = client.round_qty(symbol, qty)
+    if qty <= 0:
+        raise ExecutionError(f"{symbol}: rounded qty is zero")
     if qty < float(filters["min_qty"]):
         raise ExecutionError(f"{symbol}: sized qty {qty} below exchange min_qty {filters['min_qty']}")
 
